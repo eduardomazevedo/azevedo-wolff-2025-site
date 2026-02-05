@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Broad Validity of the First-Order Approach in Moral Hazard</title>
+
+  <meta name="title" content="Broad Validity of the First-Order Approach in Moral Hazard">
+  <meta name="description" content="Interactive examples from the paper 'Broad Validity of the First-Order Approach in Moral Hazard' by Eduardo M. Azevedo and Ilan Wolff.">
+  <meta name="author" content="Eduardo M. Azevedo, Ilan Wolff">
+
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:wght@500;600;700&display=swap" rel="stylesheet">
+  <script>
+    MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+  <main id="main-content">
+    <section class="hero is-light">
+      <div class="hero-body">
+        <div class="container is-max-desktop has-text-centered">
+          <p class="eyebrow">Azevedo-Wolff (2025)</p>
+          <h1 class="title is-2 publication-title">Broad Validity of the First-Order Approach in Moral Hazard</h1>
+          <p class="subtitle is-5">Interactive examples from the paper.</p>
+          <div class="publication-links">
+            <span class="link-block">
+              <a href="https://eduardomazevedo.github.io/papers/azevedo-wolff-foa.pdf" target="_blank" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fas fa-file-pdf"></i></span>
+                <span>Paper (PDF)</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="https://github.com/eduardomazevedo/azevedo-wolff-2025" target="_blank" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fab fa-github"></i></span>
+                <span>Code</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="https://arxiv.org/abs/2506.18873" target="_blank" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="ai ai-arxiv"></i></span>
+                <span>arXiv</span>
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section dashboard-section">
+      <div class="container is-max-desktop">
+        <div class="content intro-text">
+          <h2 class="title is-4">Interactive Examples</h2>
+          <p>
+            This site lets readers interactively explore some examples from the paper. Pick a case and adjust the reservation utility to see the solution to the principal's optimal contracting problem. The top panel shows the wage contract $w(y)$ as a function of the output $y$, and the bottom panel shows the agent's expected utility $E[U(y)]$ as a function of the action $a$.
+          </p>
+          <p>
+            The main point in the paper is that the first-order approach is often valid as long as the agent's reservation utility is not too low. We also see that the FOA often fails for extremely low reservation utility, so that it is not possible to find generally applicable sufficient conditions for the FOA to be valid without conditions on the reservation utility. The student-t example shows that the FOA can fail when the score is not monotone.
+          </p>
+          <p>
+            You can explore more examples in our
+            <a href="https://colab.research.google.com/github/eduardomazevedo/moralhazard/blob/main/examples/colab_demo.ipynb" target="_blank" rel="noopener noreferrer" class="colab-link">
+              <span class="icon"><i class="fas fa-external-link-alt"></i></span>
+              Colab demo
+            </a>.
+          </p>
+        </div>
+      </div>
+      <div class="dashboard-frame full-bleed">
+        <iframe
+          title="Azevedo-Wolff Dashboard"
+          src="dashboard.html"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+        ></iframe>
+      </div>
+    </section>
+
+    <section class="section is-light">
+      <div class="container is-max-desktop">
+        <div class="content">
+          <h2 class="title is-4">Case Parameters</h2>
+          <p>
+            Each case corresponds to a utility specification and an output distribution. Values are in USD 1,000s where noted.
+          </p>
+        </div>
+        <div class="table-container">
+          <table class="table is-striped is-fullwidth is-hoverable">
+            <thead>
+              <tr>
+                <th>Case</th>
+                <th>Utility</th>
+                <th>Distribution</th>
+                <th>Distribution Params</th>
+                <th>w0</th>
+                <th>target a</th>
+                <th>a range</th>
+                <th>y grid</th>
+                <th>Reservation wage range</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>log-gaussian</td>
+                <td>log</td>
+                <td>Gaussian</td>
+                <td>sigma = 50</td>
+                <td>50</td>
+                <td>100</td>
+                <td>0 to 180</td>
+                <td>y ∈ [-300, 480], n = 201</td>
+                <td>-1 to 15</td>
+              </tr>
+              <tr>
+                <td>cara-gaussian</td>
+                <td>CARA (alpha = 1 / w0)</td>
+                <td>Gaussian</td>
+                <td>sigma = 50</td>
+                <td>50</td>
+                <td>100</td>
+                <td>0 to 180</td>
+                <td>y ∈ [-300, 480], n = 201</td>
+                <td>-1 to 15</td>
+              </tr>
+              <tr>
+                <td>log-poisson</td>
+                <td>log</td>
+                <td>Poisson</td>
+                <td>—</td>
+                <td>50</td>
+                <td>7</td>
+                <td>0 to 10</td>
+                <td>y ∈ [0, 28], step = 1</td>
+                <td>-1 to 5</td>
+              </tr>
+              <tr>
+                <td>log-exponential</td>
+                <td>log</td>
+                <td>Exponential</td>
+                <td>—</td>
+                <td>50</td>
+                <td>100</td>
+                <td>10 to 180</td>
+                <td>y ∈ [0.01, 260], n = 201</td>
+                <td>-1 to 15</td>
+              </tr>
+              <tr>
+                <td>log-t</td>
+                <td>log</td>
+                <td>Student t</td>
+                <td>sigma = 20, nu = 1.15</td>
+                <td>50</td>
+                <td>100</td>
+                <td>0 to 180</td>
+                <td>y ∈ [-500, 680], n = 201</td>
+                <td>-1 to 100</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="content has-text-centered">
+        <p>
+          Interactive materials for Azevedo-Wolff (2025).
+        </p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

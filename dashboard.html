@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moral Hazard Demo: Azevedo Wolff (2025)</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="./model_data.js"></script>
+    
+    <style>
+        body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        
+        /* Controls */
+        .controls { display: flex; align-items: center; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee; margin-bottom: 20px; }
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-weight: bold; font-size: 0.9em; color: #555; }
+        select { padding: 8px; font-size: 1em; }
+        .slider-container { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        .value-display { font-family: monospace; font-weight: bold; color: #007bff; }
+
+        /* Grid for Plots */
+        .grid { display: grid; grid-template-rows: 1fr 1fr; gap: 20px; }
+        .plot-box { height: 420px; border: 1px solid #eee; border-radius: 4px; }
+        
+        @media (max-width: 768px) { .grid { grid-template-rows: 1fr 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 style="margin-top:0">Principal Problem: Azevedo Wolff (2025)</h2>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label for="caseSelect">Case Selection</label>
+            <select id="caseSelect"></select>
+        </div>
+        
+        <div class="slider-container">
+            <label>Reservation Wage: <span id="wageDisplay" class="value-display">--</span></label>
+            <input type="range" id="wageSlider" min="0" max="0" step="1" value="0">
+        </div>
+    </div>
+
+    <div id="foaStatusDisplay" style="text-align: center; margin-bottom: 20px; font-size: 1.1em; font-weight: bold;"></div>
+
+    <div class="grid">
+        <div id="wagePlot" class="plot-box"></div>
+        <div id="utilityPlot" class="plot-box"></div>
+    </div>
+</div>
+
+<script>
+    // --- Distribution Functions (Ported from Python) ---
+    // These functions are currently not used as dist_name and dist_kwargs
+    // are not yet being exported to model_data.js.
+    // They are left here for future implementation.
+
+    // Lanczos approximation for log-gamma function
+    function logGamma(x) {
+        const g = 7;
+        const p = [
+            0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+            771.32342877765313, -176.61502916214059, 12.507343278686905,
+            -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+        ];
+        if (x < 0.5) {
+            return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+        }
+        x -= 1;
+        let a = p[0];
+        let t = x + g + 0.5;
+        for (let i = 1; i < p.length; i++) {
+            a += p[i] / (x + i);
+        }
+        return Math.log(a) + (x + 0.5) * Math.log(t) - t + Math.log(Math.sqrt(2 * Math.PI));
+    }
+
+    const DISTRIBUTIONS = {
+        gaussian: (y, a, { sigma = 1.0 }) => {
+            const inv_s2 = 1.0 / (sigma * sigma);
+            const norm_const = 1.0 / (Math.sqrt(2.0 * Math.PI) * sigma);
+            return norm_const * Math.exp(-0.5 * inv_s2 * (y - a) ** 2);
+        },
+        poisson: (y, a) => {
+            if (y < 0 || y !== Math.floor(y)) return 0;
+            const log_a = Math.log(Math.max(a, 1e-300));
+            return Math.exp(y * log_a - a - logGamma(y + 1.0));
+        },
+        exponential: (y, a) => {
+            if (y < 0) return 0;
+            const eff_a = Math.max(a, 1e-300);
+            return (1.0 / eff_a) * Math.exp(-y / eff_a);
+        },
+        student_t: (y, a, { nu = 5.0, sigma = 1.0 }) => {
+            // Pre-calculated gamma part of the constant in Python would be better,
+            // but we do it here for simplicity.
+            const log_gamma_nu_plus_1_half = logGamma((nu + 1.0) / 2.0);
+            const log_gamma_nu_half = logGamma(nu / 2.0);
+            const c = Math.exp(log_gamma_nu_plus_1_half - log_gamma_nu_half) / (Math.sqrt(Math.PI * nu) * sigma);
+            
+            const t = (y - a) / sigma;
+            return c * Math.pow(1.0 + (t * t) / nu, -(nu + 1.0) / 2.0);
+        }
+    };
+
+    // calculateDistY is currently not used.
+    /*
+    function calculateDistY(distName, distKwargs, yGrid, action) {
+        const distFunc = DISTRIBUTIONS[distName.toLowerCase().replace('_', '')];
+        if (!distFunc) {
+            console.error("Unknown distribution:", distName);
+            return Array(yGrid.length).fill(0);
+        }
+        return yGrid.map(y => distFunc(y, action, distKwargs));
+    }
+    */
+
+    // 1. Setup
+    const data = window.MORAL_HAZARD_DATA;
+    if (!data) { alert("Error: model_data.js not found or invalid."); }
+
+    const caseSelect = document.getElementById('caseSelect');
+    const wageSlider = document.getElementById('wageSlider');
+    const wageDisplay = document.getElementById('wageDisplay');
+
+    // Populate Dropdown
+    Object.keys(data).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = key;
+        caseSelect.appendChild(opt);
+    });
+
+    // 2. Plot Config (Common layout options)
+    const layoutCommon = {
+        margin: { t: 40, r: 20, b: 40, l: 50 },
+        showlegend: false,
+        font: { family: "Helvetica, Arial, sans-serif" }
+    };
+
+    function updatePlots() {
+        const caseKey = caseSelect.value;
+        const caseData = data[caseKey];
+        const index = parseInt(wageSlider.value);
+        const frame = caseData.frames[index];
+
+        if (!frame) return; // Handle missing frames if any
+
+        // Update Slider Label
+        wageDisplay.textContent = frame.rw.toFixed(2);
+        
+        // Update FOA Status Display
+        const foaStatusDisplay = document.getElementById('foaStatusDisplay');
+        if (frame.foa_holds) {
+            foaStatusDisplay.textContent = 'FOA Holds';
+            foaStatusDisplay.style.color = '#2ca02c'; // Green
+        } else {
+            foaStatusDisplay.textContent = 'FOA Fails';
+            foaStatusDisplay.style.color = '#ff7f0e'; // Orange
+        }
+
+        // --- Plot 1: Wage Contract w(y) ---
+        const paperRed = 'rgb(255, 92, 92)';
+
+        const wageTrace = {
+            x: caseData.y_grid,
+            y: frame.wage_curve,
+            mode: 'lines',
+            line: { 
+                color: paperRed,
+                width: 2
+            },
+            name: 'Wage'
+        };
+        
+        const densityTrace = {
+            x: caseData.y_grid,
+            y: frame.density_curve,
+            mode: 'lines',
+            line: { 
+                color: 'rgba(128, 128, 128, 0.5)', // Faded gray with 50% opacity
+                width: 2
+            },
+            name: 'Output Density',
+            yaxis: 'y2' // Use secondary y-axis, but match primary scale
+        };
+
+        const layoutWage = {
+            ...layoutCommon,
+            title: 'Optimal Contract',
+            xaxis: { title: 'Output y (USD 1,000s)' },
+            yaxis: { title: 'Wage w(y) (USD 1,000s)', range: caseData.wageYRange },
+            yaxis2: { 
+                overlaying: 'y',
+                side: 'right',
+                showticklabels: false,
+                showgrid: false,
+                zeroline: false,
+                range: caseData.wageYRange, // Match primary axis so 0 aligns
+                title: '' // No title for this axis
+            }
+        };
+
+        // Render
+        Plotly.react('wagePlot', [wageTrace, densityTrace], layoutWage); // Added densityTrace
+
+        // --- Plot 2: Utility vs Action ---
+        const utilTrace = {
+            x: caseData.a_grid,
+            y: frame.u_curve,
+            mode: 'lines',
+            line: { color: paperRed, width: 2 },
+            name: 'Utility'
+        };
+
+        const optimTrace = {
+            x: [frame.opt_a],
+            y: [frame.opt_u],
+            mode: 'markers',
+            marker: { color: 'red', size: 10 },
+            name: 'Optimal Action'
+        };
+
+        const optimumUtilityLineTrace = {
+            x: caseData.a_grid,
+            y: Array(caseData.a_grid.length).fill(frame.opt_u),
+            mode: 'lines',
+            line: { color: paperRed, dash: 'dash', width: 1 },
+            name: 'Optimal Utility Level'
+        };
+        
+        const layoutUtil = {
+            ...layoutCommon,
+            title: 'Agent Expected Utility',
+            xaxis: { title: 'Action (USD 1,000s)' },
+            yaxis: { title: 'Agent expected utility (certain equivalent, USD 1,000s)', range: caseData.utilYRange }
+        };
+
+        // Render
+        Plotly.react('utilityPlot', [utilTrace, optimTrace, optimumUtilityLineTrace], layoutUtil);
+    }
+
+    // 3. Event Listeners
+    caseSelect.addEventListener('change', () => {
+        const caseKey = caseSelect.value;
+        const caseData = data[caseKey];
+
+        // --- Store Fixed Y-Axis Ranges ---
+        // This was pre-calculated in Python, let's use it.
+        caseData.wageYRange = caseData.wage_axis_range;
+        caseData.utilYRange = caseData.utility_axis_range;
+
+        // Reset slider range
+        const count = caseData.frames.length;
+        wageSlider.max = count > 0 ? count - 1 : 0;
+        wageSlider.value = Math.floor((count - 1) / 2); // Start in middle
+        updatePlots();
+    });
+
+    wageSlider.addEventListener('input', updatePlots);
+
+    // Initial Load
+    const initialCaseKey = caseSelect.value;
+    const initialCaseData = data[initialCaseKey];
+    initialCaseData.wageYRange = initialCaseData.wage_axis_range;
+    initialCaseData.utilYRange = initialCaseData.utility_axis_range;
+    
+    const frameCount = initialCaseData.frames.length;
+    wageSlider.max = frameCount > 0 ? frameCount - 1 : 0;
+    wageSlider.value = Math.floor((frameCount - 1) / 2);
+    updatePlots();
+
+    // Resize Handler
+    window.onresize = function() {
+        Plotly.Plots.resize(document.getElementById('wagePlot'));
+        Plotly.Plots.resize(document.getElementById('utilityPlot'));
+    };
+</script>
+
+</body>
+</html>
