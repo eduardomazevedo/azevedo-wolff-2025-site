@@ -151,6 +151,11 @@ body {
     margin-bottom: 1.5rem;
 }
 
+.publication-authors .author-sep {
+  margin: 0 0.5rem;
+  color: var(--text-light);
+}
+
 /* Dashboard page overrides */
 :root {
   --primary-color: #ff5c5c;
@@ -834,4 +839,3 @@ a:focus {
     box-shadow: none !important;
   }
 }
-
